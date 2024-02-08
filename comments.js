@@ -1,28 +1,31 @@
-//create web server
-const express = require('express');
-const app = express();
-const bodyParser = require('body-parser');
-const fs = require('fs');
-const path = require('path');
-const commentData = require('./commentData.json');
-const PORT = process.env.PORT || 3000;
+//Create web server
+var http = require('http');
+var url = require('url');
+var fs = require('fs');
+var comments = require('./comments');
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
-//get all comments
-app.get('/api/comments', (req, res) => {
-  res.json(commentData);
+var server = http.createServer(function (req, res) {
+    var url_parts = url.parse(req.url);
+    if (url_parts.pathname == '/') {
+        fs.readFile('index.html', function (err, data) {
+            res.end(data);
+        });
+    }
+    else if (url_parts.pathname.substr(0, 9) == '/comment/') {
+        var comment = unescape(url_parts.pathname.substr(9));
+        comments.add(comment, function () {
+            res.end();
+        });
+    }
+    else if (url_parts.pathname == '/get') {
+        comments.get(function (data) {
+            res.end(data);
+        });
+    }
+    else {
+        res.writeHead(404, {'Content-Type': 'text/plain'});
+        res.end('Page not found');
+    }
 });
 
-//add new comment
-app.post('/api/comments', (req, res) => {
-  const newComment = {
-    id: commentData.length + 1,
-    name: req.body.name,
-    comment: req.body.comment,
-    };
-    commentData.push(newComment);
-    fs.writeFileSync(path.join(__dirname, 'commentData.json'), JSON.stringify(commentData));
-    res.json(commentData);
-});
+server.listen(8080);
